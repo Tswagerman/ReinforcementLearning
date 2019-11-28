@@ -15,20 +15,23 @@ int len(double *array){
 }
 
 double printArray(double *array){
-	double length = len(array);
-	for(int i = 0;i < length; i++){
-		printf("%lf", array[i]);
+	int length = len(array);
+	printf("[");
+	for(int i = 0;i < (length - 1); i++){
+		printf("%lf, ", array[i]);
 	}
+	printf("%lf", array[length - 1]);
+	printf("]\n");
 	return 0;
 }
 
-int returnMaxProb(double *distribution){
+int returnMaxArm(double *distribution){
 	//printf("test test\n");
 	int length = len(distribution);
 	double max = 0;
 	int maxi = 0;
 	for (int i = 0; i < length; i++){
-		if(distribution[i] > max){
+		if(distribution[i] >= max){
 			max = distribution[i];
 			maxi = i;
 		}
@@ -46,7 +49,6 @@ int check(int maxValue, int x){
 
 double *QValue(double *Q, double distribution, int armOption, int k){
 	double prev = Q[armOption];
-	printf("armoption = %d\n", armOption);
 	Q[armOption] = (prev * (k-1) + distribution)/(k);
 	return Q;
 }
@@ -62,10 +64,10 @@ double averageReward(double *rewardArray){
 }
 
 double calculateSD(double *array, double mean){
+	//The length is the same every time. This is a bit redundant for this problem.
 	int length = len(array);
 	double squaredDiff = 0;
     double standardDeviation = 0;
-    //The length is the same every time. This is a bit redundant for this problem.
     for(int i=0; i<length; ++i){
         squaredDiff += pow(array[i] - mean, 2);
     }
@@ -94,13 +96,14 @@ double bernoulliRewardFunction(double p_a){
 		return -1;
 	}
     double x = (double)rand()/(double)(RAND_MAX/1);
-    if(p_a < x) {
+    if(p_a > x) {
     	return 1;
     }
     return 0.00000000000001;//Need to figure out how to return 0 and still fill distribution array.
 }
 
 //Algorithms
+
 //Epsilon-greedy
 int epsilonGreedy(double *distribution, double epsilon, int max){
 	int length = len(distribution);
@@ -117,20 +120,17 @@ int epsilonGreedy(double *distribution, double epsilon, int max){
 }
 
 //Optimisitic intital value
-int optimisticInitialValue(double *distribution, double alpha, double a_n, int max){
-	int length = len(distribution);
-	double random = (double)rand()/(double)(RAND_MAX/(alpha/300));
-	double beta = alpha/a_n;
+/*int optimisticInitialValue(){
 	//Exploration
-	if ( beta >= random){
-		int r = rand() % length; 
-		return r;
+	if ( ){
+	
+		return ;
 	}
 	//optimal probability.
 	else {
 		return max;
 	}
-}
+}*/
 
 //
 
@@ -184,16 +184,15 @@ int main() {
 		mean = (double)rand()/(double)(RAND_MAX/1);
 		gaussianDistribution[i] = mean;
 		bernoulliDistribution[i] = bernoulli();
+		//adding just 0 will not fill the array
 		gaussianQ[i] = 0.000000000001;
+		bernoulliQ[i] = 0.000000000001;
 	}
 	//printf("\n" );
 	printArray(gaussianDistribution);
 	printf("\n" );
 	printArray(bernoulliDistribution);
 	printf("\n" );
-	//printf("\nQQQQQQQQQQQQQ\n");
-	//printArray(gaussianQ);
-	//printf("\nQQQQQQQQQQQQQ\n");
 	while(algorithm != 1 && algorithm != 2 && algorithm != 3 && algorithm != 4){
 		printf("Which algorithm do you wanna use? 1: Epsilon-greedy 2: Optimistic initial value 3: 4:\n");
 		scanf("%d", &algorithm);
@@ -205,7 +204,61 @@ int main() {
 			for(int t = 0; t < runs; t ++){
 				for(int a = 0; a < actionSelections; a++){
 					//The element in the array with the highest probability in the distribution.
-					maxValueG = returnMaxProb(gaussianQ);
+					maxValueG = returnMaxArm(gaussianQ);
+					//Gaussian
+					//Picking an arm using the epsilon greedy algorithm.
+					int gaussianArmOption = epsilonGreedy(gaussianDistribution, epsilon, maxValueG);
+					countArrGaussian[gaussianArmOption] += 1;
+					int countG = countArrGaussian[gaussianArmOption];
+					//STD of 1 for any arm with a mean that varies for every arm.
+					double gaussianReward = gaussian(1, gaussianDistribution[gaussianArmOption]);
+					gaussianQ = QValue(gaussianQ, gaussianReward, gaussianArmOption, countG);
+					//printf("\nQQQQQQQQQQQQQ\n");
+					//printArray(gaussianQ);
+					//printf("\nQQQQQQQQQQQQQ\n");
+					//Check whether the arm that was chosen is the arm with the highest probability.
+					int optionG = check(maxValueG, gaussianArmOption);
+					//If it is the arm with the highest probability the counter goes up.
+					if (optionG == 1){
+						optimalArmGaussianCnt++;
+					}
+					//Adding reward probability to reward array. 
+					//This array can be used to compute the average probability.
+					gaussianRewardArray[a] = gaussianReward;
+					//Bernoulli, same process as gaussian. But different
+					maxValueB = returnMaxArm(bernoulliQ);
+					int bernoulliArmOption = epsilonGreedy(bernoulliDistribution, epsilon, maxValueB);
+					countArrBernoulli[bernoulliArmOption] += 1;
+					int countB = countArrBernoulli[bernoulliArmOption];
+					double bernoulliProbability = bernoulliDistribution[bernoulliArmOption];
+					//To compute the reward of the bernoulli distrubution, one last function
+					double bernoulliReward = bernoulliRewardFunction(bernoulliProbability);
+					bernoulliQ = QValue(bernoulliQ, bernoulliReward, bernoulliArmOption, countB);
+					int optionB = check(maxValueB, bernoulliArmOption);
+					if (optionB == 1){
+						optimalArmBernoulliCnt++;
+					}
+					bernoulliRewardArray[a] = bernoulliReward;
+				}
+				//Average reward per run. Then added to the reward array, storing the averages per run.
+				double averageRewardGaussian = averageReward(gaussianRewardArray);
+				averageGaussianRewardArray[t] = averageRewardGaussian;
+
+				double averageRewardBernoulli  = averageReward(bernoulliRewardArray);
+				averageBernoulliRewardArray[t] = averageRewardBernoulli;
+			}
+			break;
+		case 2:
+			printf("Assign a Q-value preferably from 1 to 5\n");
+			scanf("%lf", &alpha);
+			for(int i = 0; i < arms; i ++){
+				gaussianQ[i] = alpha;
+				bernoulliQ[i] = alpha;
+			}
+			for(int t = 0; t < runs; t ++){
+				for(int a = 0; a < actionSelections; a++){
+					//The element in the array with the highest probability in the distribution.
+					maxValueG = returnMaxArm(gaussianQ);
 					//Gaussian
 					//Picking an arm using the epsilon greedy algorithm.
 					int gaussianArmOption = epsilonGreedy(gaussianDistribution, epsilon, maxValueG);
@@ -228,7 +281,7 @@ int main() {
 					//This array can be used to compute the average probability.
 					gaussianRewardArray[a] = gaussianReward;
 					//Bernoulli, same process as gaussian. But different
-					maxValueB = returnMaxProb(bernoulliDistribution);
+					maxValueB = returnMaxArm(bernoulliQ);
 					int bernoulliArmOption = epsilonGreedy(bernoulliDistribution, epsilon, maxValueB);
 					//printf("armoptionB = %d\n", bernoulliArmOption);
 					countArrBernoulli[bernoulliArmOption] += 1;
@@ -249,46 +302,6 @@ int main() {
 
 				double averageRewardBernoulli  = averageReward(bernoulliRewardArray);
 				averageBernoulliRewardArray[t] = averageRewardBernoulli;
-
-			}
-			break;
-		case 2:
-			printf("Assign a value to your step function. The higher, the more randomness initially\n");
-			scanf("%lf", &alpha);
-			for(int t = 0; t < runs; t ++){
-				for(int a = 0; a < actionSelections; a++){
-					//Gaussian
-					//Picking an arm using the epsilon greedy algorithm.
-					int gaussianArmOption = optimisticInitialValue(gaussianDistribution, alpha, t, maxValueG);
-					//Check whether the arm that was chosen is the arm with the highest probability.
-					int optionG = check(maxValueG, gaussianArmOption);
-					//If it is the arm with the highest probability the counter goes up.
-					if (optionG == 1){
-						optimalArmGaussianCnt++;
-					}
-					double gaussianReward = gaussianDistribution[gaussianArmOption];
-					//Adding reward probability to reward array. 
-					//This array can be used to compute the average probability.
-					gaussianRewardArray[a] = gaussianReward;
-					//Bernoulli, same process as gaussian.
-					int bernoulliArmOption = optimisticInitialValue(bernoulliDistribution, alpha, t, maxValueB);
-					int optionB = check(maxValueB, bernoulliArmOption);
-					if (optionB == 1){
-						optimalArmBernoulliCnt++;
-					}
-					double bernoulliProbability = bernoulliDistribution[bernoulliArmOption];
-					//To compute the reward of the bernoulli distrubution, one last function
-					double bernoulliReward = bernoulliRewardFunction(bernoulliProbability);
-					bernoulliRewardArray[a] = bernoulliReward;
-				}
-				//Average reward per run. Then added to the reward array, storing the averages per run.
-				double averageRewardGaussian = averageReward(gaussianRewardArray);
-				averageGaussianRewardArray[t] = averageRewardGaussian;
-				
-
-				double averageRewardBernoulli  = averageReward(bernoulliRewardArray);
-				averageBernoulliRewardArray[t] = averageRewardBernoulli;
-		
 			}
 			break;
 		case 3:
@@ -300,7 +313,6 @@ int main() {
 	}
 	meanGaussianReward = averageReward(averageGaussianRewardArray);
 	standardDeviationGaussian = calculateSD(averageGaussianRewardArray, meanGaussianReward);
-
 	meanBernoulliReward = averageReward(averageBernoulliRewardArray);
 	standardDeviationBernoulli = calculateSD(averageBernoulliRewardArray, meanBernoulliReward);
 	printf("\nQQQQQQQQQQQQQ\n");
@@ -315,6 +327,9 @@ int main() {
 	printf("\nReward Array\n");
 	printArray(averageGaussianRewardArray);
 	printf("End Reward Array\n");
+	printf("\nQQQQQQQQQQQQQ\n");
+	printArray(bernoulliQ);
+	printf("\nQQQQQQQQQQQQQ\n");
 	printf("\nBernoulli\n");
 	printArray(bernoulliDistribution);
 	printf("\nstandard deviation Bernoulli = %lf\n", standardDeviationBernoulli);
@@ -326,9 +341,13 @@ int main() {
 	free(gaussianDistribution);
 	free(bernoulliDistribution);
 	free(gaussianRewardArray);
+	free(countArrGaussian);
+	free(gaussianQ);
 	free(bernoulliRewardArray);
 	free(averageGaussianRewardArray);
 	free(averageBernoulliRewardArray);
+	free(countArrBernoulli);
+	free(bernoulliQ);
 	clock_t end = clock();
 	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
 	printf("time spent = %lf\n", time_spent);
