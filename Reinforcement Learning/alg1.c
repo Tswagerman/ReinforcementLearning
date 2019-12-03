@@ -11,10 +11,10 @@ int len(double *array){
 			return i;
 		}
 	}
-	return 0.00000001;
+	return 0;
 }
 
-double printArray(double *array){
+void printArray(double *array){
 	int length = len(array);
 	printf("[");
 	for(int i = 0;i < (length - 1); i++){
@@ -22,7 +22,16 @@ double printArray(double *array){
 	}
 	printf("%lf", array[length - 1]);
 	printf("]\n");
-	return 0;
+}
+
+void printPercentages(double *array){
+	int length = len(array);
+	printf("[");
+	for(int i = 0;i < (length - 1); i++){
+		printf("%.f, ", 100*array[i]);
+	}
+	printf("%.f", 100*array[length - 1]);
+	printf("]\n");
 }
 
 int returnMaxArm(double *distribution){
@@ -101,7 +110,7 @@ double bernoulliRewardFunction(double p_a){
     if(p_a > x) {
     	return 1;
     }
-    return 0.0000001;//Need to figure out how to return 0 and still fill distribution array.
+    return 0.00000000000000001;
 }
 
 //Algorithms
@@ -120,8 +129,31 @@ int epsilonGreedy(double epsilon, int max, int length){
 	}
 }
 
-//
+//Optimistic initial value
+//Optimistic initial value always goes for the maximum Qvalue. 
+//This is done within the main and required a adaptation of my pre-existing function 'QValue'.
+double *QValueOptimal(double *Q, double distribution, int armOption, int k){
+	double prev = Q[armOption];
+	//printf("prev = %lf\n", prev);
+	Q[armOption] = (prev * (k) + distribution)/(k+1);
+	//printf("Q[armOption] = %lf\n", Q[armOption]);
+	return Q;
+}
 
+
+//UCB
+int UCB(int arms, double *qValue, double *count, int actionselections, double c){
+	//Exploration is dependent on the c value. 
+	//The higher this value is, the more the program will explore
+	double *A = malloc(10000 * (sizeof(double)));
+	for(int i = 0; i<arms; i++){
+		A[i] = qValue[i] + c*sqrt(log(actionselections)/count[i]);
+	}
+	int maxi = returnMaxArm(A);
+	//optimal probability
+	free(A);
+	return maxi;
+}
 
 //
 
@@ -133,9 +165,9 @@ int main() {
 	int actionSelections = 1000;
 	int runs = 2000;
 	//double std = 0.0;
-	double mean = 0.0;
 	double epsilon = 0;
 	double alpha = 0;
+	double c = 0;
 	int arms = 0;
 	int algorithm = 0;
 	int optimalArmGaussianCnt = 0;
@@ -164,7 +196,7 @@ int main() {
 	double *gaussianRewardArray = malloc (100000 * (sizeof(double)));
 	double *gaussianQ = malloc (10000 * (sizeof(double)));
 	double *countArrGaussian =  malloc (10000 * (sizeof(double)));
-	double *averageOptimalActionG = malloc (100000 * (sizeof(double)));
+	double *averageOptimalActionG = calloc (100000 , (sizeof(double)));
 	//
 	double *bernoulliDistribution = malloc (10000 * (sizeof(double)));
 	double *bernoulliRewardArray = malloc (100000 * (sizeof(double)));
@@ -173,12 +205,16 @@ int main() {
 	double *averageOptimalActionB = malloc (100000 * (sizeof(double)));
 	//initialization of the Gaussian and Bernoulli distributions.
 	for(int i = 0; i < arms; i ++){
-		mean = (double)rand()/(double)(RAND_MAX/1);
-		gaussianDistribution[i] = mean;
+		//mean = (double)rand()/(double)(RAND_MAX/1);
+		gaussianDistribution[i] = gaussian(1, 0);
 		bernoulliDistribution[i] = bernoulli();
 		//adding just 0 will not fill the array
 		gaussianQ[i] = 0.00001;
 		bernoulliQ[i] = 0.00001;
+	}
+	for(int i = 0; i < actionSelections; i ++){
+		averageOptimalActionG[i] = 0.0001;
+		averageOptimalActionB[i] = 0.0001;
 	}
 	//printf("\n" );
 	printArray(gaussianDistribution);
@@ -186,7 +222,7 @@ int main() {
 	printArray(bernoulliDistribution);
 	printf("\n" );
 	while(algorithm != 1 && algorithm != 2 && algorithm != 3 && algorithm != 4){
-		printf("Which algorithm do you wanna use? 1: Epsilon-greedy 2: Optimistic initial value 3: 4:\n");
+		printf("Which algorithm do you wanna use? 1: Epsilon-greedy 2: Optimistic initial value 3: UCB 4:\n");
 		scanf("%d", &algorithm);
 	}
 	switch (algorithm){
@@ -250,8 +286,11 @@ int main() {
 					averageOptimalActionB[a] = (double)(tempB*t + optimalActionB)/(double)(t+1);
 				}
 				for(int i = 0; i < arms; i ++){
-					gaussianQ[i] = 0.00001;
-					bernoulliQ[i] = 0.00001;
+					//mean = (double)rand()/(double)(RAND_MAX/1);
+					gaussianDistribution[i] = gaussian(1, 0);
+					bernoulliDistribution[i] = bernoulli();
+					gaussianQ[i] = 0.000000001;
+					bernoulliQ[i] = 0.000000001;
 					countArrGaussian[i] = 0;
 					countArrBernoulli[i] = 0;
 				}
@@ -281,6 +320,87 @@ int main() {
 					int countG = countArrGaussian[gaussianArmOption];
 					//STD of 0.01 for any arm with a mean that varies for every arm.
 					double gaussianReward = gaussian(0.01, gaussianDistribution[gaussianArmOption]);
+					gaussianQ = QValueOptimal(gaussianQ, gaussianReward, gaussianArmOption, countG);
+					//Check whether the arm that was chosen is the arm with the highest probability.
+					int optionG = check(maxValueG, gaussianArmOption);
+					//If it is the arm with the highest probability the counter goes up.
+					if (optionG == 1){
+						optimalArmGaussianCnt++;
+						averageCntG++;
+					}
+					//Adding reward probability to reward array. 
+					//This array can be used to compute the average probability.
+					double prevG = gaussianRewardArray[a];
+					gaussianRewardArray[a] = (double)(prevG*t + gaussianReward)/(double)(t+1);
+					//Optimal action caluclations
+					//Gaussian
+					double optimalActionG;
+					if(maxValueGQ != maxValueG && t == 0){
+						optimalActionG = 0.000001;
+					} else{
+						optimalActionG = (double)averageCntG/((double)a+1);
+					}
+					double tempG = averageOptimalActionG[a];
+					averageOptimalActionG[a] = (double)(tempG*t + optimalActionG)/(double)(t+1);
+					//
+					//Bernoulli, same process as gaussian, but different way of computing reward.
+					maxValueB = returnMaxArm(bernoulliDistribution);
+					maxValueBQ = returnMaxArm(bernoulliQ);
+					int bernoulliArmOption = maxValueBQ;
+					countArrBernoulli[bernoulliArmOption] += 1;
+					int countB = countArrBernoulli[bernoulliArmOption];
+					double bernoulliProbability = bernoulliDistribution[bernoulliArmOption];
+					//To compute the reward of the bernoulli distrubution, one last function
+					double bernoulliReward = bernoulliRewardFunction(bernoulliProbability);
+					bernoulliQ = QValueOptimal(bernoulliQ, bernoulliReward, bernoulliArmOption, countB);
+					int optionB = check(maxValueB, bernoulliArmOption);
+					if (optionB == 1){
+						optimalArmBernoulliCnt++;
+						averageCntB++;
+					}
+					double prevB = bernoulliRewardArray[a];
+					bernoulliRewardArray[a] = (double)(prevB*t + bernoulliReward)/(double)(t+1);
+					//Optimal action caluclations
+					//Bernoulli
+					double optimalActionB;
+					if(maxValueBQ != maxValueB && t == 0){
+						optimalActionB = 0.000001;
+					} else{
+						optimalActionB = (double)averageCntB/((double)a+1);
+					}
+					double tempB = averageOptimalActionB[a];
+					averageOptimalActionB[a] = (double)(tempB*t + optimalActionB)/(double)(t+1);
+				}
+				for(int i = 0; i < arms; i ++){
+					gaussianQ[i] = alpha;
+					bernoulliQ[i] = alpha;
+					gaussianDistribution[i] = gaussian(1, 0);
+					bernoulliDistribution[i] = bernoulli();
+					countArrGaussian[i] = 0;
+					countArrBernoulli[i] = 0;
+				}
+				averageCntG = 0;
+				averageCntB = 0;
+			}
+			break;
+		//UCB (Upper-Confidence-Bound)
+		case 3:
+			printf("Assign a c preferably from 0 to 1.\nThe number c > 0 controls the degree of exploration\n");
+			scanf("%lf", &c);
+			for(int t = 0; t < runs; t ++){
+				for(int a = 0; a < actionSelections; a++){
+					//Gaussian
+					//The element in the array with the highest probability in the distribution.
+					//The optimal choice
+					maxValueG = returnMaxArm(gaussianDistribution);
+					//printf("optimal arm = %d\n", maxValueG);
+					//The optimal solution according to the q values.
+					maxValueGQ = returnMaxArm(gaussianQ);
+					int gaussianArmOption = UCB(arms, gaussianQ, countArrGaussian, actionSelections, c);
+					countArrGaussian[gaussianArmOption] += 1;
+					int countG = countArrGaussian[gaussianArmOption];
+					//STD of 0.01 for any arm with a mean that varies for every arm.
+					double gaussianReward = gaussian(0.01, gaussianDistribution[gaussianArmOption]);
 					gaussianQ = QValue(gaussianQ, gaussianReward, gaussianArmOption, countG);
 					//Check whether the arm that was chosen is the arm with the highest probability.
 					int optionG = check(maxValueG, gaussianArmOption);
@@ -295,14 +415,20 @@ int main() {
 					gaussianRewardArray[a] = (double)(prevG*t + gaussianReward)/(double)(t+1);
 					//Optimal action caluclations
 					//Gaussian
-					double optimalActionG = (double)averageCntG/((double)a+1);
+					double optimalActionG;
+					if(maxValueGQ != maxValueG && t == 0){
+						optimalActionG = 0.000001;
+					} else{
+						optimalActionG = (double)averageCntG/((double)a+1);
+					}
 					double tempG = averageOptimalActionG[a];
 					averageOptimalActionG[a] = (double)(tempG*t + optimalActionG)/(double)(t+1);
 					//
 					//Bernoulli, same process as gaussian, but different way of computing reward.
 					maxValueB = returnMaxArm(bernoulliDistribution);
 					maxValueBQ = returnMaxArm(bernoulliQ);
-					int bernoulliArmOption = maxValueBQ;
+					//The armoption is dependent on the UCB function. 
+					int bernoulliArmOption = UCB(arms, bernoulliQ, countArrBernoulli, actionSelections, c);
 					countArrBernoulli[bernoulliArmOption] += 1;
 					int countB = countArrBernoulli[bernoulliArmOption];
 					double bernoulliProbability = bernoulliDistribution[bernoulliArmOption];
@@ -318,22 +444,26 @@ int main() {
 					bernoulliRewardArray[a] = (double)(prevB*t + bernoulliReward)/(double)(t+1);
 					//Optimal action caluclations
 					//Bernoulli
-					double optimalActionB = (double)averageCntB/((double)a+1);
+					double optimalActionB;
+					if(maxValueBQ != maxValueB && t == 0){
+						optimalActionB = 0.000001;
+					} else{
+						optimalActionB = (double)averageCntB/((double)a+1);
+					}
 					double tempB = averageOptimalActionB[a];
 					averageOptimalActionB[a] = (double)(tempB*t + optimalActionB)/(double)(t+1);
 				}
 				for(int i = 0; i < arms; i ++){
-					gaussianQ[i] = alpha;
-					bernoulliQ[i] = alpha;
+					gaussianQ[i] = 0.00001;
+					bernoulliQ[i] = 0.00001;
+					gaussianDistribution[i] = gaussian(1, 0);
+					bernoulliDistribution[i] = bernoulli();
 					countArrGaussian[i] = 0;
 					countArrBernoulli[i] = 0;
 				}
 				averageCntG = 0;
 				averageCntB = 0;
 			}
-			break;
-		case 3:
-
 			break;
 		case 4:
 
@@ -345,15 +475,15 @@ int main() {
 	printf("Gaussian average reward array\n");
 	printArray(gaussianRewardArray);
 	printf("\nArray showing percentage for Gaussian optimal arm per action over runs.\n");
-	printf("\n[");
-	for(int i = 0; i < actionSelections; i++){
-   		if( i == actionSelections - 1){
-   			printf("%0.2f", averageOptimalActionG[i]);
+	printPercentages(averageOptimalActionG);
+  	for(int i = 1; i <= actionSelections; i++){
+   		if( i == actionSelections){
+   			printf("%d", i);
    		} else{
-   			printf("%0.2f, ", averageOptimalActionG[i]);
+   			printf("%d,", i);
    		}
   	}
-  	printf("]\n");
+  	printf("\n");
 	meanGaussianReward = averageReward(gaussianRewardArray);
 	standardDeviationGaussian = calculateSD(gaussianRewardArray, meanGaussianReward);
 	printf("optArm = %d\n", optimalArmGaussianCnt);
@@ -370,15 +500,7 @@ int main() {
 	printf("Bernoulli average reward array\n");
 	printArray(bernoulliRewardArray);
 	printf("\nArray showing percentage for Bernoulli optimal arm per action over runs.\n");
-	printf("\n[");
-	for(int i = 0; i < actionSelections; i++){
-   		if( i == actionSelections - 1){
-   			printf("%0.2f", averageOptimalActionB[i]);
-   		} else{
-   			printf("%0.2f, ", averageOptimalActionB[i]);
-   		}
-  	}
-  	printf("]\n");
+	printPercentages(averageOptimalActionB);
   	meanBernoulliReward = averageReward(bernoulliRewardArray);
 	standardDeviationBernoulli = calculateSD(bernoulliRewardArray, meanBernoulliReward);
 	printf("\nmean Bernoulli reward= %lf\n", meanBernoulliReward);
