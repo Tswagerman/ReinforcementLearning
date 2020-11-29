@@ -1,0 +1,5 @@
+bandit/oiv.o: bandit/oiv.cc bandit/bandit.ih bandit/bandit.h
+
+bandit/bandit.ih:
+
+bandit/bandit.h:

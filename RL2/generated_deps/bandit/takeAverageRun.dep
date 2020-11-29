@@ -1,0 +1,6 @@
+bandit/takeAverageRun.o: bandit/takeAverageRun.cc bandit/bandit.ih \
+ bandit/bandit.h
+
+bandit/bandit.ih:
+
+bandit/bandit.h:

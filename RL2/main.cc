@@ -10,7 +10,8 @@ int main()
     cin >> arms;
     cout << "The value you entered is: " << arms << '\n';
     cout << "Which algorithm do you want to use?" << '\n' <<
-        "Enter 0 for epsilon greedy." << '\n';
+        "Enter 0 for 'epsilon greedy'." << '\n' <<
+        "Enter 1 for 'optimistic initial value'." << '\n';
     cin >> algorithm;
     switch (algorithm)
     {
@@ -20,9 +21,15 @@ int main()
             cin >> algorithmSpecific;
             break;
         }
+        case 1:
+        { 
+            cout << "Which starting Q value do you want to use" << '\n';
+            cin >> algorithmSpecific;
+            break;
+        }
     }
     Bandit Gaussian(gaussian, arms, algorithm, algorithmSpecific);
-    Bandit Bernoulli(bernoulli, arms, algorithm, algorithmSpecific);
+    //Bandit Bernoulli(bernoulli, arms, algorithm, algorithmSpecific);
     Gaussian.show();
-    Bernoulli.show();
+    //Bernoulli.show();
 }
