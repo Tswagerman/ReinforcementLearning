@@ -1,0 +1,6 @@
+bandit/getHighestValue.o: bandit/getHighestValue.cc bandit/bandit.ih \
+ bandit/bandit.h
+
+bandit/bandit.ih:
+
+bandit/bandit.h:

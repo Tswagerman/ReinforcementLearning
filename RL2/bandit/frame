@@ -1,0 +1,6 @@
+//#define XERR
+#include "bandit.ih"
+
+bandit::
+{
+}

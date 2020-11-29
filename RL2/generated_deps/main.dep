@@ -1,0 +1,5 @@
+main.o: main.cc bandit/bandit.ih bandit/bandit.h
+
+bandit/bandit.ih:
+
+bandit/bandit.h:

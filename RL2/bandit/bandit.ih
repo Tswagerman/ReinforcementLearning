@@ -1,0 +1,9 @@
+#include "bandit.h"
+#include <iostream>
+#include <cstdlib>
+#include <random>
+#include <iostream>
+#include <string>
+
+
+using namespace std;

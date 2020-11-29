@@ -1,0 +1,6 @@
+bandit/destructor.o: bandit/destructor.cc bandit/bandit.ih \
+ bandit/bandit.h
+
+bandit/bandit.ih:
+
+bandit/bandit.h:

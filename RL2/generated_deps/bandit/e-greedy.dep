@@ -1,0 +1,5 @@
+bandit/e-greedy.o: bandit/e-greedy.cc bandit/bandit.ih bandit/bandit.h
+
+bandit/bandit.ih:
+
+bandit/bandit.h:

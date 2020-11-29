@@ -1,0 +1,6 @@
+bandit/runAlgorithm.o: bandit/runAlgorithm.cc bandit/bandit.ih \
+ bandit/bandit.h
+
+bandit/bandit.ih:
+
+bandit/bandit.h:
