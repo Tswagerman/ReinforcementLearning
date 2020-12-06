@@ -1,9 +1,9 @@
 //#define XERR
 #include "bandit.ih"
 
-void Bandit::printArray(int *array, int size)
+void Bandit::printArray(size_t *array, size_t size)
 {
-    for (int inc = 0; inc < size; ++inc)
+    for (size_t inc = 0; inc < size; ++inc)
     {
         cout << ' ' << array[inc] << " |";
     }    

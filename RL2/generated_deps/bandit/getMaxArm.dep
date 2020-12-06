@@ -1,0 +1,5 @@
+bandit/getMaxArm.o: bandit/getMaxArm.cc bandit/bandit.ih bandit/bandit.h
+
+bandit/bandit.ih:
+
+bandit/bandit.h:

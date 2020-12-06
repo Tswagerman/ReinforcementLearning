@@ -1,8 +1,10 @@
 //#define XERR
 #include "bandit.ih"
 
-int Bandit::OIV()
+size_t Bandit::OIV()
 {
-    int arm = getHighestValue(d_Q, d_arms);
-    return arm;
+    size_t highestValue = getMaxArm(d_Q, d_arms, d_MaxQArm);
+    d_Qmax = d_Q[highestValue];
+    d_MaxQArm = highestValue;
+    return highestValue;
 }

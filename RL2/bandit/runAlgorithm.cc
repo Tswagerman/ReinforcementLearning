@@ -3,17 +3,18 @@
 
 void Bandit::runAlgorithm()
 {
-    for (size_t count = 1; count <= d_runs; ++count)
+    for (d_runCount = 1; d_runCount <= d_runs; ++d_runCount)
     {
         //Initialization of Q value array and amount of counts per arm.      
         setQandCount(); 
-        for (size_t action = 0; action < d_actionSelections; ++action)
+        for (d_currentAction = 0; d_currentAction < d_actionSelections; ++d_currentAction)
         {
+            reward();
             switch (d_algorithm)
             {
                 case 0: //epsilon greedy
                 {
-                    d_armPicked = e_Greedy(d_epsilon);
+                    d_armPicked = e_Greedy();
                     break;
                 }
                 case 1: //optimistic initial value
@@ -21,14 +22,21 @@ void Bandit::runAlgorithm()
                     d_armPicked = OIV();
                     break;
                 }
+                case 2: //upper confidence bounds
+                {
+                    d_armPicked = UCB();
+                    break;
+                }
+                case 3: //reinforcement comparison
+                {
+                    d_armPicked = RC();
+                    break;
+                }
             }
-            ++d_count[d_armPicked];
-            ++d_overallCount[d_armPicked];
+            ++d_count[d_armPicked]; //Count per run
+            ++d_overallCount[d_armPicked]; //Count over all runs
             updateQvalue();
-            d_reward[action] += d_distArr[d_armPicked];
-            //Take average over all runs
-            if (count == d_runs)
-                d_reward[action] /= d_runs;
+            takeAverageRun(); //averaging reward and counts
         }
     }
 }
